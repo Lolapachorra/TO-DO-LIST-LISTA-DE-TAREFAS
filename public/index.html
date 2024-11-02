@@ -17,7 +17,6 @@
         .highlight {
             background-color: yellow;
         }
-        /* Estilos para drag-and-drop */
         .dragging {
             opacity: 0.5;
         }
@@ -28,7 +27,7 @@
 </head>
 <body>
     <h1>Lista de Tarefas</h1>
-    
+    <button onclick="openCreateModal()">Adicionar Tarefa</button>
     <table id="taskTable">
         <thead>
             <tr>
@@ -75,6 +74,8 @@
     </div>
 
     <script>
+        const apiUrl = "https://seu-projeto.onrender.com/api/tarefas"; // Substitua pela URL do Render
+
         let currentEditId = null;
         let draggedTaskId = null;  
         let draggedIndex = null;   
@@ -82,7 +83,7 @@
 
         async function fetchTasks() {
             try {
-                const response = await fetch('http://localhost:3000/api/tarefas');
+                const response = await fetch(apiUrl);
                 if (!response.ok) throw new Error('Erro ao buscar as tarefas');
                 const tasks = await response.json();
 
@@ -151,7 +152,7 @@
             const data_limite = document.getElementById('createDataLimite').value;
 
             try {
-                const response = await fetch('http://localhost:3000/api/tarefas', {
+                const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -176,7 +177,7 @@
             const data_limite = document.getElementById('editDataLimite').value;
 
             try {
-                const response = await fetch(`http://localhost:3000/api/tarefas/${currentEditId}`, {
+                const response = await fetch(`${apiUrl}/${currentEditId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json'
@@ -197,7 +198,7 @@
 
         async function moveTaskUp(id) {
             try {
-                const response = await fetch(`http://localhost:3000/api/tarefas/${id}/up`, { method: 'PUT' });
+                const response = await fetch(`${apiUrl}/${id}/up`, { method: 'PUT' });
                 if (!response.ok) throw new Error('Erro ao mover a tarefa para cima');
                 fetchTasks(); 
             } catch (error) {
@@ -208,7 +209,7 @@
 
         async function moveTaskDown(id) {
             try {
-                const response = await fetch(`http://localhost:3000/api/tarefas/${id}/down`, { method: 'PUT' });
+                const response = await fetch(`${apiUrl}/${id}/down`, { method: 'PUT' });
                 if (!response.ok) throw new Error('Erro ao mover a tarefa para baixo');
                 fetchTasks(); 
             } catch (error) {
@@ -265,7 +266,7 @@
             if (!confirmDelete) return;
 
             try {
-                const response = await fetch(`http://localhost:3000/api/tarefas/${id}`, { method: 'DELETE' });
+                const response = await fetch(`${apiUrl}/${id}`, { method: 'DELETE' });
                 if (!response.ok) throw new Error('Erro ao excluir a tarefa');
                 alert("Tarefa excluída com sucesso!");
                 fetchTasks(); 
@@ -279,4 +280,3 @@
     </script>
 </body>
 </html>
-
