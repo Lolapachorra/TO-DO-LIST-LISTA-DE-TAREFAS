@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista de Tarefas</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .highlight {
+            background-color: yellow;
+        }
+        /* Estilos para drag-and-drop */
+        .dragging {
+            opacity: 0.5;
+        }
+        .drop-zone {
+            border: 2px dashed #000;
+        }
+    </style>
+</head>
+<body>
+    <h1>Lista de Tarefas</h1>
+    
+    <table id="taskTable">
+        <thead>
+            <tr>
+                <th>Nome da Tarefa</th>
+                <th>Custo (R$)</th>
+                <th>Data Limite</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody id="taskTableBody">
+            <!-- As tarefas serão inseridas aqui via JavaScript -->
+        </tbody>
+    </table>
+
+    <!-- Modal de criação -->
+    <div id="overlay"></div>
+    <div id="createModal" class="modal">
+        <h2>Adicionar Nova Tarefa</h2>
+        <form id="createForm">
+            <label for="createNome">Nome da Tarefa:</label>
+            <input type="text" id="createNome" required>
+            <label for="createCusto">Custo (R$):</label>
+            <input type="number" id="createCusto" step="0.01" required>
+            <label for="createDataLimite">Data Limite:</label>
+            <input type="date" id="createDataLimite" required>
+            <button type="button" onclick="createTask()">Adicionar</button>
+            <button type="button" onclick="closeCreateModal()">Cancelar</button>
+        </form>
+    </div>
+
+    <!-- Modal de edição -->
+    <div id="editModal" class="modal">
+        <h2>Editar Tarefa</h2>
+        <form id="editForm">
+            <label for="editNome">Nome da Tarefa:</label>
+            <input type="text" id="editNome" required>
+            <label for="editCusto">Custo (R$):</label>
+            <input type="number" id="editCusto" step="0.01" required>
+            <label for="editDataLimite">Data Limite:</label>
+            <input type="date" id="editDataLimite" required>
+            <button type="button" onclick="updateTask()">Salvar</button>
+            <button type="button" onclick="closeEditModal()">Cancelar</button>
+        </form>
+    </div>
+
+    <script>
+        let currentEditId = null;
+        let draggedTaskId = null;  
+        let draggedIndex = null;   
+        let targetIndex = null;    
+
+        async function fetchTasks() {
+            try {
+                const response = await fetch('http://localhost:3000/api/tarefas');
+                if (!response.ok) throw new Error('Erro ao buscar as tarefas');
+                const tasks = await response.json();
+
+                const taskTableBody = document.getElementById('taskTableBody');
+                taskTableBody.innerHTML = ''; 
+
+                tasks.forEach((task, index) => {
+                    const row = document.createElement('tr');
+                    row.draggable = true; 
+                    row.dataset.id = task.id;  
+                    row.dataset.index = index; 
+
+                    row.addEventListener('dragstart', handleDragStart);
+                    row.addEventListener('dragover', handleDragOver);
+                    row.addEventListener('drop', handleDrop);
+                    row.addEventListener('dragend', handleDragEnd);
+
+                    if (task.custo >= 1000) row.classList.add('highlight');
+
+                    row.innerHTML = `
+                        <td>${task.nome}</td>
+                        <td>${task.custo.toFixed(2)}</td>
+                        <td>${task.data_limite}</td>
+                        <td>
+                            <button onclick="openEditModal(${task.id}, '${task.nome}', ${task.custo}, '${task.data_limite}')">Editar</button>
+                            <button onclick="deleteTask(${task.id})">Excluir</button>
+                            <button onclick="moveTaskUp(${task.id})" ${index === 0 ? 'disabled' : ''}>Subir</button>
+                            <button onclick="moveTaskDown(${task.id})" ${index === tasks.length - 1 ? 'disabled' : ''}>Descer</button>
+                        </td>
+                    `;
+                    taskTableBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error(error);
+                alert('Erro ao carregar as tarefas.');
+            }
+        }
+
+        function openCreateModal() {
+            document.getElementById('createModal').style.display = 'block';
+            document.getElementById('overlay').style.display = 'block';
+        }
+
+        function closeCreateModal() {
+            document.getElementById('createModal').style.display = 'none';
+            document.getElementById('overlay').style.display = 'none';
+        }
+
+        function openEditModal(id, nome, custo, data_limite) {
+            currentEditId = id;
+            document.getElementById('editNome').value = nome;
+            document.getElementById('editCusto').value = custo;
+            document.getElementById('editDataLimite').value = data_limite;
+            document.getElementById('editModal').style.display = 'block';
+            document.getElementById('overlay').style.display = 'block';
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+            document.getElementById('overlay').style.display = 'none';
+        }
+
+        async function createTask() {
+            const nome = document.getElementById('createNome').value;
+            const custo = parseFloat(document.getElementById('createCusto').value);
+            const data_limite = document.getElementById('createDataLimite').value;
+
+            try {
+                const response = await fetch('http://localhost:3000/api/tarefas', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ nome, custo, data_limite })
+                });
+
+                if (!response.ok) throw new Error('Erro ao criar a tarefa');
+
+                alert('Tarefa criada com sucesso!');
+                closeCreateModal();
+                fetchTasks(); 
+            } catch (error) {
+                console.error(error);
+                alert('Erro ao criar a tarefa.');
+            }
+        }
+
+        async function updateTask() {
+            const nome = document.getElementById('editNome').value;
+            const custo = parseFloat(document.getElementById('editCusto').value);
+            const data_limite = document.getElementById('editDataLimite').value;
+
+            try {
+                const response = await fetch(`http://localhost:3000/api/tarefas/${currentEditId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ nome, custo, data_limite })
+                });
+
+                if (!response.ok) throw new Error('Erro ao atualizar a tarefa');
+
+                alert('Tarefa atualizada com sucesso!');
+                closeEditModal();
+                fetchTasks(); 
+            } catch (error) {
+                console.error(error);
+                alert('Erro ao atualizar a tarefa.');
+            }
+        }
+
+        async function moveTaskUp(id) {
+            try {
+                const response = await fetch(`http://localhost:3000/api/tarefas/${id}/up`, { method: 'PUT' });
+                if (!response.ok) throw new Error('Erro ao mover a tarefa para cima');
+                fetchTasks(); 
+            } catch (error) {
+                console.error(error);
+                alert('Erro ao mover a tarefa para cima.');
+            }
+        }
+
+        async function moveTaskDown(id) {
+            try {
+                const response = await fetch(`http://localhost:3000/api/tarefas/${id}/down`, { method: 'PUT' });
+                if (!response.ok) throw new Error('Erro ao mover a tarefa para baixo');
+                fetchTasks(); 
+            } catch (error) {
+                console.error(error);
+                alert('Erro ao mover a tarefa para baixo.');
+            }
+        }
+
+        function handleDragStart(event) {
+            draggedTaskId = event.target.dataset.id;
+            draggedIndex = parseInt(event.target.dataset.index);
+            event.target.classList.add('dragging');
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault();
+            const targetRow = event.target.closest('tr');
+            if (targetRow && targetRow !== event.target) {
+                targetRow.classList.add('drop-zone'); 
+            }
+        }
+
+        function handleDrop(event) {
+            const targetRow = event.target.closest('tr');
+            if (targetRow) {
+                targetIndex = parseInt(targetRow.dataset.index); 
+                targetRow.classList.remove('drop-zone');
+                reorderTasks();
+            }
+        }
+
+        function handleDragEnd(event) {
+            event.target.classList.remove('dragging');
+            document.querySelectorAll('.drop-zone').forEach(el => el.classList.remove('drop-zone'));
+        }
+
+        async function reorderTasks() {
+            const steps = Math.abs(targetIndex - draggedIndex);
+            const direction = targetIndex > draggedIndex ? 'down' : 'up';
+
+            for (let i = 0; i < steps; i++) {
+                if (direction === 'down') {
+                    await moveTaskDown(draggedTaskId);
+                } else {
+                    await moveTaskUp(draggedTaskId);
+                }
+            }
+
+            fetchTasks();
+        }
+
+        async function deleteTask(id) {
+            const confirmDelete = confirm("Tem certeza que deseja excluir esta tarefa?");
+            if (!confirmDelete) return;
+
+            try {
+                const response = await fetch(`http://localhost:3000/api/tarefas/${id}`, { method: 'DELETE' });
+                if (!response.ok) throw new Error('Erro ao excluir a tarefa');
+                alert("Tarefa excluída com sucesso!");
+                fetchTasks(); 
+            } catch (error) {
+                console.error(error);
+                alert('Erro ao excluir a tarefa.');
+            }
+        }
+
+        window.onload = fetchTasks;
+    </script>
+</body>
+</html>
+
