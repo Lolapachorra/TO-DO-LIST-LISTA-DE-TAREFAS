@@ -3,7 +3,7 @@ const path = require('path');
 const app = express();
 const taskRoutes = require('./routes/taskRoutes');
 const cors = require('cors');
-
+app.use(express.json());
 app.use(cors({
   origin: 'https://lista-de-tarefas-ufce.onrender.com' // Substitua pela URL do seu frontend no Render
 }));
@@ -14,7 +14,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Rota para a API
 app.use('/api', taskRoutes);
 
-app.use(express.json());
+
 
 app.get(/^\/(?!api).*/, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
