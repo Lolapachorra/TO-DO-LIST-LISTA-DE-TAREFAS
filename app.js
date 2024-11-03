@@ -20,9 +20,7 @@ app.get(/^\/(?!api).*/, (req, res) => {
 
 
 // Rota para servir o "index.html" para qualquer rota não especificada (SPA)
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
