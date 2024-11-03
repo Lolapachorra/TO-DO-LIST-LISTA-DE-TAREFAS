@@ -14,6 +14,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Rota para a API
 app.use('/api', taskRoutes);
 
+app.get(/^\/(?!api).*/, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+
 // Rota para servir o "index.html" para qualquer rota não especificada (SPA)
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
