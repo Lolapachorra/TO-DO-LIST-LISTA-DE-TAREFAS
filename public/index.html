@@ -136,12 +136,18 @@
                 row.addEventListener('dragend', handleDragEnd);
     
                 if (task.custo >= 1000) row.classList.add('highlight');
+
+                const formattedDate = new Date(task.data_limite).toLocaleDateString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
     
                 row.innerHTML = `
                     <td>${task.id}</td> <!-- Identificador usando o ID da tarefa -->
                     <td>${task.nome}</td>
                       <td>${task.custo.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                    <td>${task.data_limite}</td>
+                    <td>${formattedDate}</td>
                     <td>
                         <button onclick="openEditModal(${task.id}, '${task.nome}', ${task.custo}, '${task.data_limite}')">Editar</button>
                         <button onclick="deleteTask(${task.id})">Excluir</button>
@@ -170,6 +176,11 @@
         function formatCurrencyInput(input) {
             // Remove tudo que não é número
             let value = input.value.replace(/\D/g, '');
+            if (!value) { 
+        input.value = ''; // Limpa o campo se o valor for inválido
+        return;
+            }
+    
             // Divide por 100 para adicionar casas decimais
             value = (parseInt(value, 10) / 100).toFixed(2);
             // Formata no estilo brasileiro
@@ -266,7 +277,10 @@
         function openEditModal(id, nome, custo, data_limite) {
             currentEditId = id;
             document.getElementById('editNome').value = nome;
-            document.getElementById('editCusto').value = custo;
+
+            const formattedCusto = custo.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            document.getElementById('editCusto').value = formattedCusto;
+            
             document.getElementById('editDataLimite').value = data_limite;
             document.getElementById('editModal').style.display = 'block';
             document.getElementById('overlay').style.display = 'block';
@@ -320,7 +334,7 @@
                 fetchTasks(); 
             } catch (error) {
                 console.error(error);
-                alert('Erro ao criar a tarefa.');
+                alert('nao pode existir duas tarefas com o mesmo nome!.');
             }
         }
     
