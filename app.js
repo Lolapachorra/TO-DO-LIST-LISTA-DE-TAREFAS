@@ -7,7 +7,7 @@ app.use(express.json());
 app.use(cors({
   origin: 'https://lista-de-tarefas-ufce.onrender.com' // Substitua pela URL do seu frontend no Render
 }));
-
+//'https://lista-de-tarefas-ufce.onrender.com'
 // Middleware para servir arquivos estáticos da pasta "public"
 app.use(express.static(path.join(__dirname, 'public')));
 
